@@ -1,10 +1,10 @@
-DEFINT A-Z
+DECLARE SUB DisplayString (str AS STRING, x%, y%)
 DECLARE SUB DisplayFonts ()
-DECLARE SUB DisplayChar (n, x, y)
-DECLARE SUB DisplayString (str AS STRING, x, y)
-DECLARE SUB DisplayTable (x, y)
-DECLARE SUB DrawStroke (x1, y1, x2, y2)
+DECLARE SUB DisplayChar (n%, x%, y%)
+DECLARE SUB DrawStroke (x1%, y1%, x2%, y2%)
 DECLARE SUB LoadFont (file AS STRING)
+DECLARE SUB DisplayTable (x%, y%)
+DEFINT A-Z
 
 TYPE StrokeRecord
     Op AS STRING * 1
@@ -24,29 +24,18 @@ CONST OPEND = 2
 
 SCREEN 12
 
-'debug = -1
+debug = 1
 'slowDraw = 500
 
-'LoadFont "MODN.DAT"
-'DisplayChar 95, 0, 0 ' "~" = chr(127)
-'DisplayString "Hello World!", 0, 0
-DisplayFonts
+LoadFont "MODN.DAT"
+DisplayChar 95, 0, 0 ' "~" = chr(127)
+DisplayString "Hello World!", 0, 0
+'DisplayFonts
 
 END
 
 DATA "TSCR","TRIP","THIN","SIMP","SCRI","SANS"
 DATA "MODN","LITT","LCOM","GOTH","EURO","BOLD"
-
-SUB DisplayFonts STATIC
-    DIM Filenames(12) AS STRING * 4
-    FOR i = 1 TO 12
-        READ Filenames(i)
-    NEXT
-    FOR i = 1 TO 12
-        LoadFont Filenames(i) + ".DAT"
-        DisplayTable 0, 40 * (i - 1)
-    NEXT
-END SUB
 
 SUB DisplayChar (n, x, y) STATIC
     FOR i = CharStart(n) TO CharStop(n)
@@ -63,6 +52,17 @@ SUB DisplayChar (n, x, y) STATIC
 
         posx = StrokeData(i).x
         posy = StrokeData(i).y
+    NEXT
+END SUB
+
+SUB DisplayFonts STATIC
+    DIM Filenames(12) AS STRING * 4
+    FOR i = 1 TO 12
+        READ Filenames(i)
+    NEXT
+    FOR i = 7 TO 7
+        LoadFont Filenames(i) + ".DAT"
+        DisplayTable 0, 40 * (i - 1)
     NEXT
 END SUB
 
@@ -86,7 +86,7 @@ SUB DisplayTable (x, y) STATIC
 END SUB
 
 SUB DrawStroke (x1, y1, x2, y2) STATIC
-    IF debug THEN
+    IF debug > 1 THEN
         PRINT "LINE ("; x1; ", "; y1; ")-("; x2; ","; y2; ")"
     ELSE
         LINE (x1, y1)-(x2, y2)
@@ -98,7 +98,7 @@ SUB LoadFont (file AS STRING) STATIC
 
     OPEN file FOR RANDOM AS #1 LEN = LEN(StrokeData(1))
     recordCount = LOF(1) \ LEN(StrokeData(1))
-    charCount = &H5F
+    charCount = &H7F
 
     IF debug THEN
         PRINT "File length = "; LOF(1)
@@ -108,7 +108,7 @@ SUB LoadFont (file AS STRING) STATIC
     END IF
 
     charHeight = 20
-    charWidth = 12
+    charWidth = 8
 
     REDIM StrokeData(recordCount) AS StrokeRecord
     REDIM CharStart(charCount) AS INTEGER ' Start of stroke data
