@@ -4,3 +4,7 @@
 * https://www.qbasic.net/en/top-ten-downloads/
 * http://www.petesqbsite.com/sections/tutorials/misc.shtml
 * http://ethanwiner.com/fullmoon.html
+
+# FONT.BAS
+
+reference: https://github.com/cc65/cc65/blob/master/src/chrcvt65/main.c
