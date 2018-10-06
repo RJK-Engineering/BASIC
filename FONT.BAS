@@ -1,134 +1,303 @@
+DECLARE SUB DisplayChar (n%, x%, y%)
 DECLARE SUB DisplayString (str AS STRING, x%, y%)
 DECLARE SUB DisplayFonts ()
-DECLARE SUB DisplayChar (n%, x%, y%)
-DECLARE SUB DrawStroke (x1%, y1%, x2%, y2%)
-DECLARE SUB LoadFont (file AS STRING)
 DECLARE SUB DisplayTable (x%, y%)
+DECLARE SUB DrawStroke (x1%, y1%, x2%, y2%)
+' Load font SUBs and FUNCTIONs
+DECLARE SUB LoadFont (file AS STRING)
+DECLARE SUB ProcessVectorData (offset%, remaining%, char%, i%)
+DECLARE FUNCTION GetByte% (addr%)
+DECLARE FUNCTION GetSignedByte% (addr%)
+DECLARE FUNCTION GetShort& (addr%)
 DEFINT A-Z
 
-TYPE StrokeRecord
-    Op AS STRING * 1
+TYPE StrokeFileHeader
+    firstChar AS INTEGER
+    charCount AS INTEGER
+    recordCount AS INTEGER
+    top AS INTEGER
+    baseline AS INTEGER
+    bottom AS INTEGER
+    height AS INTEGER
+    vectorTableAddr AS INTEGER
+    recordOffset AS INTEGER
+    widthAddr AS INTEGER
+END TYPE
+
+TYPE VectorRecord
+    op AS INTEGER
     x AS INTEGER
     y AS INTEGER
 END TYPE
 
-COMMON SHARED debug, slowDraw
-COMMON SHARED recordCount, charCount, charWidth, charHeight
-COMMON SHARED StrokeData() AS StrokeRecord
-COMMON SHARED CharStart() AS INTEGER ' Start of stroke data
-COMMON SHARED CharStop() AS INTEGER ' End of stroke data
+COMMON SHARED dir AS STRING
+COMMON SHARED slowDraw, letterSpacing, lineSpacing
+COMMON SHARED Font AS StrokeFileHeader
+COMMON SHARED VectorData() AS VectorRecord
+COMMON SHARED CharWidth(), CharStart(), CharStop()
 
-CONST OPMOVE = 0
-CONST OPDRAW = 1
-CONST OPEND = 2
+CONST CHARCOUNTADDR = &H81
+CONST FIRSTCHARADDR = &H84
+CONST HEIGHTTOPADDR = &H88
+CONST HEIGHTBASELINEADDR = &H89
+CONST HEIGHTBOTTOMADDR = &H8A
+CONST TABLESADDR = &H90
+
+CONST OPEND = &H0&
+CONST OPMOVE = &H80&
+CONST OPDRAW = &H8080&
 
 SCREEN 12
+CONST DEBUG = 0 ' 0-4
+dir = "C:\QUIKMENU\" '"
+' slowDraw = 1500
+letterSpacing = 1: lineSpacing = 0 ' connected codepage 437 border chars
+letterSpacing = 0: lineSpacing = 1 ' compact
 
-debug = 1
-'slowDraw = 500
-
-LoadFont "MODN.DAT"
-DisplayChar 95, 0, 0 ' "~" = chr(127)
-DisplayString "Hello World!", 0, 0
-'DisplayFonts
+preview = 2
+IF preview = 1 THEN
+    LoadFont dir + "MODN.CHR"
+    DisplayChar 95, 0, 0 ' "~" = chr(127)
+    DisplayString "Hello World!", 0, Font.height + lineSpacing
+    DisplayString "Hello World!", 0, (Font.height + lineSpacing) * 2
+ELSEIF preview = 2 THEN
+    LoadFont dir + "LITT.CHR"
+    ' LoadFont dir + "SANS.CHR"
+    ' LoadFont dir + "GOTH.CHR"
+    DisplayTable 0, 0
+    letterSpacing = 1: lineSpacing = 0
+    DisplayTable 0, 240
+ELSEIF preview = 3 THEN
+    DisplayFonts
+END IF
 
 END
 
 DATA "TSCR","TRIP","THIN","SIMP","SCRI","SANS"
 DATA "MODN","LITT","LCOM","GOTH","EURO","BOLD"
 
+NoMore:
+    END
+
 SUB DisplayChar (n, x, y) STATIC
     FOR i = CharStart(n) TO CharStop(n)
-        SELECT CASE (ASC(StrokeData(i).Op))
-        CASE OPDRAW
+        IF VectorData(i).op = 2 THEN
             x1 = x + posx
-            x2 = x + StrokeData(i).x
-            y1 = y - posy + charHeight
-            y2 = y - StrokeData(i).y + charHeight
+            x2 = x + VectorData(i).x
+            y1 = y - posy + Font.height
+            y2 = y - VectorData(i).y + Font.height
 
             DrawStroke x1, y1, x2, y2
             IF slowDraw THEN FOR c = 1 TO slowDraw: NEXT
-        END SELECT
+        END IF
 
-        posx = StrokeData(i).x
-        posy = StrokeData(i).y
+        posx = VectorData(i).x
+        posy = VectorData(i).y
     NEXT
 END SUB
 
 SUB DisplayFonts STATIC
-    DIM Filenames(12) AS STRING * 4
-    FOR i = 1 TO 12
-        READ Filenames(i)
-    NEXT
-    FOR i = 7 TO 7
-        LoadFont Filenames(i) + ".DAT"
-        DisplayTable 0, 40 * (i - 1)
+    DIM filename AS STRING * 4
+    DIM currFont AS STRING * 4
+
+    IF DEBUG = 0 THEN VIEW PRINT 30 TO 30
+
+    ON ERROR GOTO NoMore
+
+    FOR i = 1 TO 100
+        READ filename
+
+        PRINT "Loading " + filename + "... ";
+        LoadFont dir + filename + ".CHR"
+
+        IF i > 1 THEN
+            PRINT : PRINT "This font: " + currFont;
+            PRINT "    Next font: " + filename;
+            PRINT "    Press any key...";
+            DO: LOOP WHILE INKEY$ = ""
+        END IF
+
+        currFont = filename
+        CLS
+        PRINT "This font: " + currFont + "    ";
+        DisplayTable 0, 0
     NEXT
 END SUB
 
 SUB DisplayString (str AS STRING, x, y) STATIC
     FOR i = 1 TO LEN(str)
-        DisplayChar ASC(MID$(str, i, 1)) - &H1F, x, 100
-        x = x + charWidth
+        char = ASC(MID$(str, i, 1)) - &H1F
+        DisplayChar char, x, y
+        x = x + CharWidth(char) + letterSpacing
     NEXT
 END SUB
 
 SUB DisplayTable (x, y) STATIC
-    FOR i = 1 TO charCount
-        DisplayChar i, x, y
+    xpos = x
+    FOR i = 1 TO Font.charCount
+        DisplayChar i, xpos, y
 
-        IF i = &H30 THEN
-            x = x - &H30 * charWidth
-            y = y + charHeight
+        IF i MOD &H20 = 0 THEN
+            xpos = x
+            y = y + Font.height + lineSpacing
+        ELSE
+            xpos = xpos + CharWidth(i) + letterSpacing
         END IF
-        x = x + charWidth
     NEXT
 END SUB
 
 SUB DrawStroke (x1, y1, x2, y2) STATIC
-    IF debug > 1 THEN
+    IF DEBUG >= 4 THEN
         PRINT "LINE ("; x1; ", "; y1; ")-("; x2; ","; y2; ")"
-    ELSE
+    ELSEIF DEBUG = 0 THEN
         LINE (x1, y1)-(x2, y2)
     END IF
 END SUB
 
+FUNCTION GetByte (addr) STATIC
+    DIM char AS STRING * 1
+    GET #1, addr + 1, char
+    GetByte = ASC(char)
+END FUNCTION
+
+' Read 16-bit UNsigned short, because INTEGER is 16-bit signed, return 32-bit signed LONG
+FUNCTION GetShort& (addr) STATIC
+    GetShort = GetByte(addr) + GetByte(addr + 1) * &H100&
+END FUNCTION
+
+FUNCTION GetSignedByte (addr) STATIC
+    byte = GetByte(addr)
+    IF byte >= &H80 THEN byte = byte - &HFF
+    GetSignedByte = byte
+END FUNCTION
+
 SUB LoadFont (file AS STRING) STATIC
-    REDIM StrokeData(1) AS StrokeRecord ' Needed for LEN()
+    IF DEBUG THEN PRINT "Input: "; file
 
-    OPEN file FOR RANDOM AS #1 LEN = LEN(StrokeData(1))
-    recordCount = LOF(1) \ LEN(StrokeData(1))
-    charCount = &H7F
+    OPEN file FOR BINARY AS #1
 
-    IF debug THEN
-        PRINT "File length = "; LOF(1)
-        PRINT "Record length = "; LEN(StrokeData(1))
-        PRINT "Record count = "; recordCount
-        PRINT "Character count = "; charCount
-    END IF
+    Font.firstChar = GetByte(FIRSTCHARADDR)
+    IF DEBUG THEN PRINT "First char: "; Font.firstChar
 
-    charHeight = 20
-    charWidth = 8
+    Font.charCount = GetShort(CHARCOUNTADDR)
+    IF DEBUG THEN PRINT "Char count: "; Font.charCount
 
-    REDIM StrokeData(recordCount) AS StrokeRecord
-    REDIM CharStart(charCount) AS INTEGER ' Start of stroke data
-    REDIM CharStop(charCount) AS INTEGER ' End of stroke data
+    Font.top = GetSignedByte(HEIGHTTOPADDR)
+    Font.baseline = GetSignedByte(HEIGHTBASELINEADDR)
+    Font.bottom = GetSignedByte(HEIGHTBOTTOMADDR)
+    Font.height = Font.top - Font.bottom
+    IF DEBUG THEN PRINT "Height: "; Font.top; Font.baseline; Font.bottom; Font.height
 
-    ' Load stroke data and character start and stop positions
-    char = 1
-    CharStart(char) = 0
-    FOR i = 1 TO recordCount
-        GET #1, i, StrokeData(i)
+    ' Ignore chars < 0x20
+    charOffset = &H20 - Font.firstChar
+    Font.recordOffset = TABLESADDR + charOffset * 2
+    Font.widthAddr = TABLESADDR + Font.charCount * 2 + charOffset
+    Font.vectorTableAddr = TABLESADDR + Font.charCount * 3
+    IF DEBUG THEN PRINT "Table addr: "; Font.recordOffset; Font.widthAddr; Font.vectorTableAddr
 
-        ' Next char starts after stroke end operation
-        IF ASC(StrokeData(i).Op) = OPEND THEN
-            CharStop(char) = i
-            char = char + 1
+    Font.charCount = Font.charCount - charOffset
+    Font.firstChar = &H20
 
-            IF char <= charCount THEN CharStart(char) = i + 1
+    REDIM CharWidth(Font.charCount)
+    REDIM CharStart(Font.charCount) ' Start of stroke data
+    REDIM CharStop(Font.charCount) ' End of stroke data
+
+    ' Calculate vector record count, 2 bytes per record
+    Font.recordCount = (LOF(1) - Font.vectorTableAddr) \ 2
+    IF DEBUG THEN PRINT "Records: "; Font.recordCount; "-"; Font.charCount; "=";
+
+    ' OPEND records will not be stored, 1 per character
+    Font.recordCount = Font.recordCount - Font.charCount
+    IF DEBUG THEN PRINT Font.recordCount
+
+    REDIM VectorData(Font.recordCount) AS VectorRecord
+    CharStart(1) = 1
+
+    FOR char = 1 TO Font.charCount
+        recordAddr = Font.vectorTableAddr + GetShort(Font.recordOffset)
+        remaining = LOF(1) - recordAddr
+
+        IF remaining <= 0 THEN
+            PRINT "Invalid data offset in "; file
+            END
         END IF
-    NEXT
-    CLOSE #1
 
+        IF DEBUG >= 2 THEN
+            PRINT "ASCII: "; HEX$(Font.firstChar + char - 1); ", Width: "; CharWidth(char)
+            PRINT "Record addr: "; recordAddr; remaining
+        END IF
+
+        CharWidth(char) = GetSignedByte(Font.widthAddr)
+        ProcessVectorData recordAddr, remaining, char, vector
+
+        Font.recordOffset = Font.recordOffset + 2
+        Font.widthAddr = Font.widthAddr + 1
+    NEXT
+    IF DEBUG THEN PRINT "Vector counter: "; vector
+
+    CLOSE #1
+END SUB
+
+' Load vector data and character start and stop positions
+SUB ProcessVectorData (recordAddr, remaining, char, vector) STATIC
+    DIM record AS LONG, op AS LONG
+
+    DO
+        IF remaining < 2 THEN
+            PRINT "End of file while parsing character definitions"
+            END
+        END IF
+
+        ' Record contains two op bits and two 7-bit coordinates
+        record = GetShort(recordAddr)
+
+        ' Mask coordinates, first bits contain operation
+        op = record AND &H8080
+
+        ' Mask op bits, first byte contains y coordinate, second byte contains x coordinate
+        x = record AND &H7F
+        y = (record AND &H7F00) \ &H100
+
+        ' 7-bit signed
+        IF x >= &H40 THEN x = x - &H80
+        IF y >= &H40 THEN y = y - &H80
+
+        IF DEBUG = 3 THEN PRINT "Vector: "; HEX$(record); " = " + HEX$(op) + " (" + STR$(x) + ", " + STR$(y) + ")"
+
+        SELECT CASE op
+            ' Next char starts after stroke end operation
+            CASE OPEND
+                op = 0
+                IF DEBUG >= 4 THEN PRINT "END"
+
+                CharStop(char) = vector - 1
+                IF char < Font.charCount THEN CharStart(char + 1) = vector
+
+                EXIT DO
+
+            CASE OPMOVE
+                op = 1
+                IF DEBUG >= 4 THEN PRINT "MOVE "; x; ", "; y
+
+            CASE OPDRAW
+                op = 2
+                IF DEBUG >= 4 THEN PRINT "DRAW "; x; ", "; y
+
+            CASE ELSE
+                op = 0
+                PRINT "Input file contains invalid opcode 0x8000"
+
+        END SELECT
+
+        IF op THEN
+            vector = vector + 1
+            VectorData(vector).op = op
+            VectorData(vector).x = x
+            VectorData(vector).y = y
+        END IF
+
+        recordAddr = recordAddr + 2
+        remaining = remaining - 2
+    LOOP
 END SUB
 
