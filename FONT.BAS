@@ -122,7 +122,7 @@ SUB DisplayFonts STATIC
             DO
                 kbd$ = UCASE$(INKEY$)
                 IF kbd$ = "Q" THEN END
-            LOOP UNTIL kbd$ <> ""
+            LOOP WHILE kbd$ = ""
         END IF
 
         currFont = fontName
@@ -249,8 +249,8 @@ SUB Preview (nr) STATIC
         DisplayString "Hello", 0, 0
         DisplayString "World!", 0, 200 / scale + lineSpacing
     ELSEIF nr = 2 THEN
-        ' SetFont "LITT", 0
-        SetFont "TRIP", 0
+        SetFont "LITT", 0
+        ' SetFont "TRIP", 0
         ' SetFont "MODN", 0
         ' SetFont "SANS", 0
         ' SetFont "GOTH", 0
