@@ -51,6 +51,8 @@ CONST OPEND = &H0&
 CONST OPMOVE = &H80&
 CONST OPDRAW = &H8080&
 
+CONST OUTOFDATAERROR = 4
+
 SCREEN 12
 CONST DEBUG = 0 ' 0-4
 dir$ = "C:\QUIKMENU\" '"
@@ -70,8 +72,11 @@ END
 DATA "TSCR","TRIP","THIN","SIMP","SCRI","SANS"
 DATA "MODN","LITT","LCOM","GOTH","EURO","BOLD"
 
-NoMore:
-    END
+NoMoreFonts:
+    IF ERR = OUTOFDATAERROR THEN
+        END
+    END IF
+    ERROR ERR
 
 SUB DisplayChar (n, x, y) STATIC
     FOR i = CharStart(n) TO CharStop(n)
@@ -101,7 +106,7 @@ SUB DisplayFonts STATIC
 
     IF DEBUG = 0 THEN VIEW PRINT 30 TO 30
 
-    ON ERROR GOTO NoMore
+    ON ERROR GOTO NoMoreFonts
 
     FOR i = 1 TO 100
         READ fontName
