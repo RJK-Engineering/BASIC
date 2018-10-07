@@ -56,14 +56,12 @@ dir = "C:\QUIKMENU\" '"
 fontSize = 24
 letterSpacing = 0: lineSpacing = 1 ' compact
 
-preview = 3
+preview = 1
 IF preview = 1 THEN
     fontSize = 200
     LoadFont dir + "TRIP.CHR"
-    ' LoadFont dir + "GOTH.CHR"
-    'DisplayChar 95, 0, 0 ' "~" = chr(127)
-    ' DisplayString "Hello World!", 0, Font.height + lineSpacing
-    DisplayString "RJK", 0, 0
+    DisplayString "Hello", 0, 0
+    DisplayString "World!", 0, fontSize / scale + lineSpacing
 ELSEIF preview = 2 THEN
     ' LoadFont dir + "LITT.CHR"
     LoadFont dir + "MODN.CHR"
