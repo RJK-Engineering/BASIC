@@ -5,7 +5,7 @@ DECLARE SUB DisplayFonts ()
 DECLARE SUB DisplayTable (x%, y%)
 DECLARE SUB SetFont (fontName AS STRING, size%)
 DECLARE SUB SetFontSize (pixels%)
-DECLARE SUB SetScale ()
+DECLARE SUB SetScale (factor%)
 ' Load font SUBs and FUNCTIONs
 DECLARE SUB LoadFont (file AS STRING)
 DECLARE SUB ProcessVectorData (offset%, remaining%, char%, i%)
@@ -34,7 +34,7 @@ TYPE VectorRecord
 END TYPE
 
 COMMON SHARED dir AS STRING
-COMMON SHARED slowDraw, fontScale, fontSize, letterSpacing, lineSpacing
+COMMON SHARED slowDraw, letterSpacing, lineSpacing
 COMMON SHARED scale AS DOUBLE
 COMMON SHARED Font AS StrokeFileHeader
 COMMON SHARED VectorData() AS VectorRecord
@@ -53,10 +53,8 @@ CONST OPDRAW = &H8080&
 
 SCREEN 12
 CONST DEBUG = 0 ' 0-4
-dir = "C:\QUIKMENU\" '"
+dir$ = "C:\QUIKMENU\" '"
 ' slowDraw = 1500
-' fontScale = 4
-fontSize = 24
 letterSpacing = 0: lineSpacing = 1 ' compact
 
 Preview 1
@@ -98,7 +96,7 @@ SUB DisplayChar (n, x, y) STATIC
 END SUB
 
 SUB DisplayFonts STATIC
-    DIM filename AS STRING * 4
+    DIM fontName AS STRING * 4
     DIM currFont AS STRING * 4
 
     IF DEBUG = 0 THEN VIEW PRINT 30 TO 30
@@ -106,24 +104,29 @@ SUB DisplayFonts STATIC
     ON ERROR GOTO NoMore
 
     FOR i = 1 TO 100
-        READ filename
+        READ fontName
 
-        PRINT "Loading " + filename + "... ";
-        LoadFont dir + filename + ".CHR"
+        PRINT "Loading " + fontName + "... ";
+        WHILE INKEY$ <> "": WEND ' ignore input before, allow during loading
+        LoadFont dir$ + fontName + ".CHR"
 
         IF i > 1 THEN
             PRINT : PRINT "This font: " + currFont;
-            PRINT "    Next font: " + filename;
-            PRINT "    Press any key...";
-            DO: LOOP WHILE INKEY$ = ""
+            PRINT "    Next font: " + fontName;
+            PRINT "    Press any key, Q to quit...";
+            DO
+                kbd$ = UCASE$(INKEY$)
+                IF kbd$ = "Q" THEN END
+            LOOP UNTIL kbd$ <> ""
         END IF
 
-        currFont = filename
+        currFont = fontName
         CLS
         PRINT "This font: " + currFont + "    ";
 
+        SetFontSize 24
         DisplayTable 0, 0
-        scale = 1
+        SetScale 1
         DisplayTable 320, 0
     NEXT
 END SUB
@@ -182,7 +185,6 @@ SUB LoadFont (file AS STRING) STATIC
     Font.baseline = GetSignedByte(HEIGHTBASELINEADDR)
     Font.bottom = GetSignedByte(HEIGHTBOTTOMADDR)
     Font.height = Font.top - Font.bottom
-    SetScale
     IF DEBUG THEN PRINT "Height: "; Font.top; Font.baseline; Font.bottom; Font.height
 
     ' Ignore chars < 0x20
@@ -240,7 +242,7 @@ SUB Preview (nr) STATIC
     IF nr = 1 THEN
         SetFont "TRIP", 200
         DisplayString "Hello", 0, 0
-        DisplayString "World!", 0, fontSize / scale + lineSpacing
+        DisplayString "World!", 0, 200 / scale + lineSpacing
     ELSEIF nr = 2 THEN
         ' SetFont "LITT", 0
         SetFont "TRIP", 0
@@ -320,30 +322,28 @@ SUB ProcessVectorData (recordAddr, remaining, char, vector) STATIC
 END SUB
 
 SUB SetFont (fontName AS STRING, size) STATIC
-    DIM currentFont AS STRING
-    IF currentFont = fontName THEN EXIT SUB
+    DIM currentFont AS STRING * 4
 
-    PRINT "Loading " + fontName + "... ";
-    LoadFont dir + fontName + ".CHR"
-    SetFontSize size
-    CLS
+    IF currentFont <> fontName THEN
+        PRINT "Loading " + fontName + "... ";
+        LoadFont dir$ + fontName + ".CHR"
+        CLS
+    END IF
+
+    IF size = 0 THEN
+        SetScale 1
+    ELSE
+        SetFontSize size
+    END IF
 
     currentFont = fontName
 END SUB
 
 SUB SetFontSize (pixels) STATIC
-    fontScale = 0
-    fontSize = pixels
-    SetScale
+    scale = pixels / Font.height
 END SUB
 
-SUB SetScale STATIC
-    IF fontScale THEN
-        scale = fontScale
-    ELSEIF fontSize THEN
-        scale = fontSize / Font.height
-    ELSE
-        scale = 1
-    END IF
+SUB SetScale (factor) STATIC
+    scale = factor
 END SUB
 
