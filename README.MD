@@ -5,7 +5,3 @@
 * http://www.petesqbsite.com/sections/tutorials/misc.shtml
 * http://ethanwiner.com/fullmoon.html
 * https://www.instructables.com/id/Using-a-mouse-in-QBasic-programs/
-
-# FONT.BAS
-
-reference: https://github.com/cc65/cc65/blob/master/src/chrcvt65/main.c
