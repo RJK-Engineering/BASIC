@@ -1,7 +1,10 @@
+DECLARE SUB Preview (nr%)
 DECLARE SUB DisplayChar (n%, x%, y%)
 DECLARE SUB DisplayString (str AS STRING, x%, y%)
 DECLARE SUB DisplayFonts ()
 DECLARE SUB DisplayTable (x%, y%)
+DECLARE SUB SetFont (fontName AS STRING, size%)
+DECLARE SUB SetFontSize (pixels%)
 DECLARE SUB SetScale ()
 ' Load font SUBs and FUNCTIONs
 DECLARE SUB LoadFont (file AS STRING)
@@ -32,8 +35,8 @@ END TYPE
 
 COMMON SHARED dir AS STRING
 COMMON SHARED slowDraw, fontScale, fontSize, letterSpacing, lineSpacing
-COMMON SHARED Font AS StrokeFileHeader
 COMMON SHARED scale AS DOUBLE
+COMMON SHARED Font AS StrokeFileHeader
 COMMON SHARED VectorData() AS VectorRecord
 COMMON SHARED CharWidth(), CharStart(), CharStop()
 
@@ -56,23 +59,13 @@ dir = "C:\QUIKMENU\" '"
 fontSize = 24
 letterSpacing = 0: lineSpacing = 1 ' compact
 
-preview = 1
-IF preview = 1 THEN
-    fontSize = 200
-    LoadFont dir + "TRIP.CHR"
-    DisplayString "Hello", 0, 0
-    DisplayString "World!", 0, fontSize / scale + lineSpacing
-ELSEIF preview = 2 THEN
-    ' LoadFont dir + "LITT.CHR"
-    LoadFont dir + "MODN.CHR"
-    ' LoadFont dir + "SANS.CHR"
-    ' LoadFont dir + "GOTH.CHR"
-    DisplayTable 0, 0
-    letterSpacing = 0: lineSpacing = 2
-    DisplayTable 320 / scale, 0
-ELSEIF preview = 3 THEN
-    DisplayFonts
-END IF
+Preview 1
+SLEEP 10
+CLS
+Preview 2
+SLEEP 10
+CLS
+Preview 3
 
 END
 
@@ -243,6 +236,26 @@ SUB LoadFont (file AS STRING) STATIC
     CLOSE #1
 END SUB
 
+SUB Preview (nr) STATIC
+    IF nr = 1 THEN
+        SetFont "TRIP", 200
+        DisplayString "Hello", 0, 0
+        DisplayString "World!", 0, fontSize / scale + lineSpacing
+    ELSEIF nr = 2 THEN
+        ' SetFont "LITT", 0
+        SetFont "TRIP", 0
+        ' SetFont "MODN", 0
+        ' SetFont "SANS", 0
+        ' SetFont "GOTH", 0
+        ' SetFont "BOLD", 0
+        DisplayTable 0, 0
+        letterSpacing = 0: lineSpacing = 2
+        DisplayTable 320 / scale, 0
+    ELSEIF nr = 3 THEN
+        DisplayFonts
+    END IF
+END SUB
+
 ' Load vector data and character start and stop positions
 SUB ProcessVectorData (recordAddr, remaining, char, vector) STATIC
     DIM record AS LONG, op AS LONG
@@ -304,6 +317,24 @@ SUB ProcessVectorData (recordAddr, remaining, char, vector) STATIC
         recordAddr = recordAddr + 2
         remaining = remaining - 2
     LOOP
+END SUB
+
+SUB SetFont (fontName AS STRING, size) STATIC
+    DIM currentFont AS STRING
+    IF currentFont = fontName THEN EXIT SUB
+
+    PRINT "Loading " + fontName + "... ";
+    LoadFont dir + fontName + ".CHR"
+    SetFontSize size
+    CLS
+
+    currentFont = fontName
+END SUB
+
+SUB SetFontSize (pixels) STATIC
+    fontScale = 0
+    fontSize = pixels
+    SetScale
 END SUB
 
 SUB SetScale STATIC
