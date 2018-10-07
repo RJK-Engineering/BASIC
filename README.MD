@@ -4,6 +4,7 @@
 * https://www.qbasic.net/en/top-ten-downloads/
 * http://www.petesqbsite.com/sections/tutorials/misc.shtml
 * http://ethanwiner.com/fullmoon.html
+* https://www.instructables.com/id/Using-a-mouse-in-QBasic-programs/
 
 # FONT.BAS
 
