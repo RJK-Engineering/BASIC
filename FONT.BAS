@@ -6,12 +6,15 @@ DECLARE SUB DisplayTable (x%, y%)
 DECLARE SUB SetFont (fontName AS STRING, size%)
 DECLARE SUB SetFontSize (pixels%)
 DECLARE SUB SetScale (factor%)
+DECLARE FUNCTION GetNextFont$ ()
+
 ' Load font SUBs and FUNCTIONs
 DECLARE SUB LoadFont (file AS STRING)
 DECLARE SUB ProcessVectorData (offset%, remaining%, char%, i%)
 DECLARE FUNCTION GetByte% (addr%)
 DECLARE FUNCTION GetSignedByte% (addr%)
 DECLARE FUNCTION GetShort& (addr%)
+
 DEFINT A-Z
 
 TYPE StrokeFileHeader
@@ -64,7 +67,6 @@ SLEEP 10
 CLS
 Preview 2
 SLEEP 10
-CLS
 Preview 3
 
 END
@@ -106,26 +108,24 @@ SUB DisplayFonts STATIC
 
     IF DEBUG = 0 THEN VIEW PRINT 30 TO 30
 
-    ON ERROR GOTO NoMoreFonts
-
     FOR i = 1 TO 100
-        READ fontName
+        fontName$ = GetNextFont
 
-        PRINT "Loading " + fontName + "... ";
+        PRINT "Loading " + fontName$ + "... ";
         WHILE INKEY$ <> "": WEND ' ignore input before, allow during loading
-        LoadFont dir$ + fontName + ".CHR"
+        LoadFont dir$ + fontName$ + ".CHR"
 
         IF i > 1 THEN
             PRINT : PRINT "This font: " + currFont;
-            PRINT "    Next font: " + fontName;
-            PRINT "    Press any key, Q to quit...";
+            PRINT "    Next font: " + fontName$;
+            PRINT "    Press space to continue, Q to quit...";
             DO
                 kbd$ = UCASE$(INKEY$)
-                IF kbd$ = "Q" THEN END
-            LOOP WHILE kbd$ = ""
+            LOOP WHILE kbd$ <> "Q" AND kbd$ <> " "
+            IF kbd$ = "Q" THEN END
         END IF
 
-        currFont = fontName
+        currFont = fontName$
         CLS
         PRINT "This font: " + currFont + "    ";
 
@@ -160,8 +160,13 @@ END SUB
 
 FUNCTION GetByte (addr) STATIC
     DIM char AS STRING * 1
-    GET #1, addr + 1, char
-    GetByte = ASC(char)
+    GET #1, addr + 1, char$
+    GetByte = ASC(char$)
+END FUNCTION
+
+FUNCTION GetNextFont$
+    ON ERROR GOTO NoMoreFonts
+    READ GetNextFont
 END FUNCTION
 
 ' Read 16-bit UNsigned short, because INTEGER is 16-bit signed, return 32-bit signed LONG
@@ -176,9 +181,9 @@ FUNCTION GetSignedByte (addr) STATIC
 END FUNCTION
 
 SUB LoadFont (file AS STRING) STATIC
-    IF DEBUG THEN PRINT "Input: "; file
+    IF DEBUG THEN PRINT "Input: "; file$
 
-    OPEN file FOR BINARY AS #1
+    OPEN file$ FOR BINARY AS #1
 
     Font.firstChar = GetByte(FIRSTCHARADDR)
     IF DEBUG THEN PRINT "First char: "; Font.firstChar
@@ -223,7 +228,7 @@ SUB LoadFont (file AS STRING) STATIC
         remaining = LOF(1) - recordAddr
 
         IF remaining <= 0 THEN
-            PRINT "Invalid data offset in "; file
+            PRINT "Invalid data offset in "; file$
             END
         END IF
 
@@ -329,9 +334,9 @@ END SUB
 SUB SetFont (fontName AS STRING, size) STATIC
     DIM currentFont AS STRING * 4
 
-    IF currentFont <> fontName THEN
-        PRINT "Loading " + fontName + "... ";
-        LoadFont dir$ + fontName + ".CHR"
+    IF currentFont$ <> fontName$ THEN
+        PRINT "Loading " + fontName$ + "... ";
+        LoadFont dir$ + fontName$ + ".CHR"
         CLS
     END IF
 
@@ -341,7 +346,7 @@ SUB SetFont (fontName AS STRING, size) STATIC
         SetFontSize size
     END IF
 
-    currentFont = fontName
+    currentFont$ = fontName$
 END SUB
 
 SUB SetFontSize (pixels) STATIC
