@@ -2,7 +2,7 @@ DECLARE SUB DisplayChar (n%, x%, y%)
 DECLARE SUB DisplayString (str AS STRING, x%, y%)
 DECLARE SUB DisplayFonts ()
 DECLARE SUB DisplayTable (x%, y%)
-DECLARE SUB DrawStroke (x1%, y1%, x2%, y2%)
+DECLARE SUB SetScale ()
 ' Load font SUBs and FUNCTIONs
 DECLARE SUB LoadFont (file AS STRING)
 DECLARE SUB ProcessVectorData (offset%, remaining%, char%, i%)
@@ -31,8 +31,9 @@ TYPE VectorRecord
 END TYPE
 
 COMMON SHARED dir AS STRING
-COMMON SHARED slowDraw, letterSpacing, lineSpacing
+COMMON SHARED slowDraw, fontScale, fontSize, letterSpacing, lineSpacing
 COMMON SHARED Font AS StrokeFileHeader
+COMMON SHARED scale AS DOUBLE
 COMMON SHARED VectorData() AS VectorRecord
 COMMON SHARED CharWidth(), CharStart(), CharStop()
 
@@ -51,22 +52,26 @@ SCREEN 12
 CONST DEBUG = 0 ' 0-4
 dir = "C:\QUIKMENU\" '"
 ' slowDraw = 1500
-letterSpacing = 1: lineSpacing = 0 ' connected codepage 437 border chars
+' fontScale = 4
+fontSize = 24
 letterSpacing = 0: lineSpacing = 1 ' compact
 
-preview = 2
+preview = 3
 IF preview = 1 THEN
-    LoadFont dir + "MODN.CHR"
-    DisplayChar 95, 0, 0 ' "~" = chr(127)
-    DisplayString "Hello World!", 0, Font.height + lineSpacing
-    DisplayString "Hello World!", 0, (Font.height + lineSpacing) * 2
+    fontSize = 200
+    LoadFont dir + "TRIP.CHR"
+    ' LoadFont dir + "GOTH.CHR"
+    'DisplayChar 95, 0, 0 ' "~" = chr(127)
+    ' DisplayString "Hello World!", 0, Font.height + lineSpacing
+    DisplayString "RJK", 0, 0
 ELSEIF preview = 2 THEN
-    LoadFont dir + "LITT.CHR"
+    ' LoadFont dir + "LITT.CHR"
+    LoadFont dir + "MODN.CHR"
     ' LoadFont dir + "SANS.CHR"
     ' LoadFont dir + "GOTH.CHR"
     DisplayTable 0, 0
-    letterSpacing = 1: lineSpacing = 0
-    DisplayTable 0, 240
+    letterSpacing = 0: lineSpacing = 2
+    DisplayTable 320 / scale, 0
 ELSEIF preview = 3 THEN
     DisplayFonts
 END IF
@@ -82,12 +87,17 @@ NoMore:
 SUB DisplayChar (n, x, y) STATIC
     FOR i = CharStart(n) TO CharStop(n)
         IF VectorData(i).op = 2 THEN
-            x1 = x + posx
-            x2 = x + VectorData(i).x
-            y1 = y - posy + Font.height
-            y2 = y - VectorData(i).y + Font.height
+            x1 = scale * (x + posx)
+            x2 = scale * (x + VectorData(i).x)
+            y1 = scale * (y - posy + Font.height)
+            y2 = scale * (y - VectorData(i).y + Font.height)
 
-            DrawStroke x1, y1, x2, y2
+            IF DEBUG = 0 THEN
+                LINE (x1, y1)-(x2, y2)
+            ELSEIF DEBUG >= 4 THEN
+                PRINT "LINE ("; x1; ", "; y1; ")-("; x2; ","; y2; ")"
+            END IF
+
             IF slowDraw THEN FOR c = 1 TO slowDraw: NEXT
         END IF
 
@@ -120,7 +130,10 @@ SUB DisplayFonts STATIC
         currFont = filename
         CLS
         PRINT "This font: " + currFont + "    ";
+
         DisplayTable 0, 0
+        scale = 1
+        DisplayTable 320, 0
     NEXT
 END SUB
 
@@ -137,21 +150,13 @@ SUB DisplayTable (x, y) STATIC
     FOR i = 1 TO Font.charCount
         DisplayChar i, xpos, y
 
-        IF i MOD &H20 = 0 THEN
+        IF i MOD &H10 = 0 THEN
             xpos = x
             y = y + Font.height + lineSpacing
         ELSE
             xpos = xpos + CharWidth(i) + letterSpacing
         END IF
     NEXT
-END SUB
-
-SUB DrawStroke (x1, y1, x2, y2) STATIC
-    IF DEBUG >= 4 THEN
-        PRINT "LINE ("; x1; ", "; y1; ")-("; x2; ","; y2; ")"
-    ELSEIF DEBUG = 0 THEN
-        LINE (x1, y1)-(x2, y2)
-    END IF
 END SUB
 
 FUNCTION GetByte (addr) STATIC
@@ -186,6 +191,7 @@ SUB LoadFont (file AS STRING) STATIC
     Font.baseline = GetSignedByte(HEIGHTBASELINEADDR)
     Font.bottom = GetSignedByte(HEIGHTBOTTOMADDR)
     Font.height = Font.top - Font.bottom
+    SetScale
     IF DEBUG THEN PRINT "Height: "; Font.top; Font.baseline; Font.bottom; Font.height
 
     ' Ignore chars < 0x20
@@ -212,6 +218,7 @@ SUB LoadFont (file AS STRING) STATIC
 
     REDIM VectorData(Font.recordCount) AS VectorRecord
     CharStart(1) = 1
+    vector = 0
 
     FOR char = 1 TO Font.charCount
         recordAddr = Font.vectorTableAddr + GetShort(Font.recordOffset)
@@ -285,7 +292,7 @@ SUB ProcessVectorData (recordAddr, remaining, char, vector) STATIC
 
             CASE ELSE
                 op = 0
-                PRINT "Input file contains invalid opcode 0x8000"
+                IF DEBUG THEN PRINT "Input file contains invalid opcode 0x8000"
 
         END SELECT
 
@@ -299,5 +306,15 @@ SUB ProcessVectorData (recordAddr, remaining, char, vector) STATIC
         recordAddr = recordAddr + 2
         remaining = remaining - 2
     LOOP
+END SUB
+
+SUB SetScale STATIC
+    IF fontScale THEN
+        scale = fontScale
+    ELSEIF fontSize THEN
+        scale = fontSize / Font.height
+    ELSE
+        scale = 1
+    END IF
 END SUB
 
