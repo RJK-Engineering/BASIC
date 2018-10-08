@@ -176,7 +176,7 @@ END FUNCTION
 
 FUNCTION GetSignedByte (addr) STATIC
     byte = GetByte(addr)
-    IF byte >= &H80 THEN byte = byte - &HFF
+    IF byte AND &H80 THEN byte = byte - &HFF
     GetSignedByte = byte
 END FUNCTION
 
@@ -289,8 +289,8 @@ SUB ProcessVectorData (recordAddr, remaining, char, vector) STATIC
         y = (record AND &H7F00) \ &H100
 
         ' 7-bit signed
-        IF x >= &H40 THEN x = x - &H80
-        IF y >= &H40 THEN y = y - &H80
+        IF x AND &H40 THEN x = x - &H80
+        IF y AND &H40 THEN y = y - &H80
 
         IF DEBUG = 3 THEN PRINT "Vector: "; HEX$(record); " = " + HEX$(op) + " (" + STR$(x) + ", " + STR$(y) + ")"
 
