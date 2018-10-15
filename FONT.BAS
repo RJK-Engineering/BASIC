@@ -62,13 +62,9 @@ dir$ = "C:\QUIKMENU\" '"
 ' slowDraw = 1500
 letterSpacing = 0: lineSpacing = 1 ' compact
 
-Preview 1
-SLEEP 10
-CLS
-Preview 2
-SLEEP 10
+Preview 1: SLEEP: CLS
+Preview 2: SLEEP
 Preview 3
-
 END
 
 DATA "TSCR","TRIP","THIN","SIMP","SCRI","SANS"
@@ -108,7 +104,8 @@ SUB DisplayFonts STATIC
 
     IF DEBUG = 0 THEN VIEW PRINT 30 TO 30
 
-    FOR i = 1 TO 100
+    DO
+        i = i + 1
         fontName$ = GetNextFont
 
         PRINT "Loading " + fontName$ + "... ";
@@ -122,7 +119,7 @@ SUB DisplayFonts STATIC
             DO
                 kbd$ = UCASE$(INKEY$)
             LOOP WHILE kbd$ <> "Q" AND kbd$ <> " "
-            IF kbd$ = "Q" THEN END
+            IF kbd$ = "Q" THEN EXIT DO
         END IF
 
         currFont = fontName$
@@ -133,7 +130,7 @@ SUB DisplayFonts STATIC
         DisplayTable 0, 0
         SetScale 1
         DisplayTable 320, 0
-    NEXT
+    LOOP
 END SUB
 
 SUB DisplayString (str AS STRING, x, y) STATIC
