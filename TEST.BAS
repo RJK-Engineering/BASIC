@@ -1,0 +1,11 @@
+'LINE (10, 10)-(20, 20)
+SCREEN 12
+COLOR 4
+FOR x = 1 TO 100
+    CIRCLE (100, 100), x
+'    SLEEP 1
+NEXT
+
+SOUND 100, 20
+PLAY "c c# c c#"
+
