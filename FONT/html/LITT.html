@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Fonts</title>
+</head>
+<body>
+<canvas id="myCanvas" width="1180" height="768"></canvas>
+<script src="litt.js"></script>
+<script>
+var canvas = document.getElementById("myCanvas");
+
+var context = canvas.getContext('2d');
+
+function resizeCanvas(size) {
+    context.canvas.width = size
+    drawFont(context, 0, 0);
+}
+
+font.getChar = function (nr) {
+    return {
+        strokes: this.chars[nr],
+        width: this.width[nr],
+        getStroke: function (i, x, y) {
+            var stroke = this.strokes[i];
+            return {
+                x: (stroke[1] + x) * scale,
+                y: (font.height - stroke[2] + y) * scale,
+                op: stroke[0]
+            };
+        }
+    };
+}
+
+var scale;
+
+function setFont(options) { // needs mixin
+    scale = options.scale || 1;
+    context.lineWidth = options.lineWidth || "1";
+    context.lineJoin = options.lineJoin || "round";
+    context.strokeStyle = options.strokeStyle || "black";
+}
+
+context.beginPath();
+
+setFont({
+    scale: 2,
+    // size: 20, TODO
+    lineWidth: "2",
+    lineJoin: "round",
+    strokeStyle: "green",
+});
+
+drawFont(context, font, 10, 30);
+drawText(context, font, "Hello world!", 10, 10);
+
+context.stroke();
+context.closePath();
+
+function drawText(ctx, font, string, x, y) {
+    for (var i=0; i<string.length; i++) {
+        var c = string.charCodeAt(i);
+        var char = font.getChar(c - 32);
+        drawChar(ctx, char, x, y);
+        x += char.width;
+    }
+}
+
+function drawChar(ctx, char, x, y) {
+    for (var i in char.strokes) {
+        var s = char.getStroke(i, x, y);
+        if (s.op) {
+            ctx.lineTo(s.x, s.y);
+        } else {
+            ctx.moveTo(s.x, s.y);
+        }
+    }
+}
+
+function drawFont(ctx, font, xpos, ypos) {
+    // console.log(font.chars.length);
+    // console.log(font.width.length);
+    var x = xpos;
+    var y = ypos;
+
+    for (var c in font.chars) {
+        var char = font.getChar(c);
+        drawChar(ctx, char, x, y);
+        x += char.width;
+        if (c != 0 && c % 32 == 0) {
+            x = xpos;
+            y += font.height;
+        }
+    }
+}
+
+/*
+https://www.sitepen.com/blog/dive-into-dojo-gfx/
+
+canvas page components
+    canvasses[]
+    canvas = {
+       element,
+       context,
+       texts: [ { font, string } ],
+    }
+
+https://stackoverflow.com/questions/8684820/scale-html-canvas-to-browser-window-size-but-dont-scale-elements-within-the-can/8686566#8686566
+var ctx = document.querySelector('#mycanvas').getContext('2d');
+window.addEventListener('resize',function(){
+  var width  = calculateDesiredWidth();  // your code here
+  var height = calculateDesiredHeight(); // your code here
+  ctx.canvas.width  = width;
+  ctx.canvas.height = height;
+  ctx.translate(width/2,height/2); // now 0,0 is the center of the canvas.
+},false);
+
+https://stackoverflow.com/questions/7054272/how-to-draw-smooth-curve-through-n-points-using-javascript-html5-canvas
+
+*/
+
+</script>
+</body>
+</html>
