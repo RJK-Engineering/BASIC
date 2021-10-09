@@ -1,3 +1,5 @@
+'https://en.wikibooks.org/wiki/QBasic/Full_Book_View
+
 '-----------------
 INPUT "What is your name"; name$ 'Question mark added
 
