@@ -4,13 +4,37 @@ use strict;
 use warnings;
 
 my %opts = (
-    dat => 0,
+    font => 'LITT',
+    datOutput => 0,
     dirIn => '.',
     dirOut => 'c:\temp\2',
-    javascriptOut => 1,
+    javascriptOut => 0,
     lookUp => 0,
     verbose => 0,
+    info => 0,
 );
+
+my %optValueDescriptions = (
+    font => '[path]',
+    datOutput => '1/0',
+    dirIn => '[path]',
+    dirOut => '[path]',
+    javascriptOut => '1/0',
+    lookUp => '1/0',
+    verbose => '1/0',
+    info => '- print font file info',
+);
+
+if (@ARGV == 1 && $ARGV[0] eq 'info') {
+    $opts{lookUp} = 1;
+} elsif (@ARGV && not @ARGV % 2) {
+    my %args = @ARGV;
+    $opts{$_} = $args{$_} for keys %args;
+} else {
+    print "USAGE: $0 [OPTIONS]\n";
+    print "OPTIONS:\n\t", join("\n\t", map { $_ . (exists $optValueDescriptions{$_} and " $optValueDescriptions{$_}") } sort keys %opts), "\n";
+    exit 1;
+}
 
 ##########################
 
@@ -29,7 +53,7 @@ if ($opts{lookUp}) {
     @fonts = map { s/\.CHR$//r } grep { /\.CHR$/ } readdir $dh;
     closedir $dh;
 } else {
-    @fonts = qw(LITT);
+    @fonts = $opts{font};
 }
 
 foreach (@fonts) {
