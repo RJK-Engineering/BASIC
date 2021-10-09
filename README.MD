@@ -5,3 +5,9 @@
 * http://www.petesqbsite.com/sections/tutorials/misc.shtml
 * http://ethanwiner.com/fullmoon.html
 * https://www.instructables.com/id/Using-a-mouse-in-QBasic-programs/
+* http://theguiblog.com/
+
+# Code
+
+* http://qbasicgui.datacomponents.net/
+* https://web.archive.org/web/20140904181932/http://www.qbasic.com/games/
