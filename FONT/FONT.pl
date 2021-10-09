@@ -4,10 +4,10 @@ use strict;
 use warnings;
 
 my %opts = (
-    font => 'LITT',
+    font => 'LITT.CHR',
     datOutput => 0,
     dirIn => '.',
-    dirOut => 'c:\temp\2',
+    dirOut => '.',
     javascriptOut => 0,
     lookUp => 0,
     verbose => 0,
@@ -15,14 +15,14 @@ my %opts = (
 );
 
 my %optValueDescriptions = (
-    font => '[path]',
-    datOutput => '1/0',
-    dirIn => '[path]',
-    dirOut => '[path]',
-    javascriptOut => '1/0',
-    lookUp => '1/0',
-    verbose => '1/0',
-    info => '- print font file info',
+    font => ["[path]", "default: $opts{font}"],
+    datOutput => ["1/0", "default: $opts{datOutput}"],
+    dirIn => ["[path]", "default: $opts{dirIn}"],
+    dirOut => ["[path]", "default: $opts{dirOut}"],
+    javascriptOut => ["1/0", "default: $opts{javascriptOut}"],
+    lookUp => ["1/0", "default: $opts{lookUp}"],
+    verbose => ["1/0", "default: $opts{verbose}"],
+    info => ["", "Read and print info from font files in [dirIn]"],
 );
 
 if (@ARGV == 1 && $ARGV[0] eq 'info') {
@@ -32,7 +32,12 @@ if (@ARGV == 1 && $ARGV[0] eq 'info') {
     $opts{$_} = $args{$_} for keys %args;
 } else {
     print "USAGE: $0 [OPTIONS]\n";
-    print "OPTIONS:\n\t", join("\n\t", map { $_ . (exists $optValueDescriptions{$_} and " $optValueDescriptions{$_}") } sort keys %opts), "\n";
+    print "OPTIONS:\n";
+    foreach (sort keys %opts) {
+        my $d = $optValueDescriptions{$_};
+        printf "\t%s%s\n\t\t%s\n", $_, $d->[0] && " $d->[0]", $d->[1];
+    }
+    print "\n";
     exit 1;
 }
 
@@ -50,7 +55,7 @@ my $outFh;
 my @fonts;
 if ($opts{lookUp}) {
     opendir (my $dh, $opts{dirIn}) or Error("$!");
-    @fonts = map { s/\.CHR$//r } grep { /\.CHR$/ } readdir $dh;
+    @fonts = grep { /\.CHR$/ } readdir $dh;
     closedir $dh;
 } else {
     @fonts = $opts{font};
@@ -58,7 +63,7 @@ if ($opts{lookUp}) {
 
 foreach (@fonts) {
     Print ("Font: $_");
-    ConvertFile("$opts{dirIn}\\$_.CHR", "$opts{dirOut}\\$_.DAT");
+    ConvertFile("$opts{dirIn}\\$_", "$opts{dirOut}\\$_.DAT");
 }
 
 my $newChar;
@@ -68,7 +73,7 @@ sub ProcessOperation {
     $x -= 128 if $x > 63;
     $y -= 128 if $y > 63;
 
-    if ($opts{dat}) {
+    if ($opts{datOutput}) {
         print $outFh pack("Css", $op, $x, $y);
     } elsif ($opts{javascriptOut}) {
         if ($op == 2) {
@@ -119,7 +124,8 @@ sub lastChar { $char == $lastChar-1 }
 sub ConvertFile {
     my ($input, $output) = @_;
 
-    if ($opts{dat}) {
+    if ($opts{datOutput}) {
+        die "File exists: $output" if -e $output;
         open ($outFh, '>', $output) or Error("$!");
         binmode $outFh;
     } elsif ($opts{javascriptOut}) {
@@ -186,7 +192,7 @@ sub ConvertFile {
         ProcessVectorData (\@buf, $vectorBuf + $offs, $remaining);
     }
 
-    if ($opts{dat}) {
+    if ($opts{datOutput}) {
         close $outFh;
     } elsif ($opts{javascriptOut}) {
         print "width:[";
